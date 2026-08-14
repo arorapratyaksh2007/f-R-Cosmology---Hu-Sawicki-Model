@@ -5,6 +5,6 @@ f(R) Cosmology Model is an alternate way to explain the composition of the unive
 Two methods of Numerical Analysis have been used namely Finite Difference Method and the Chebyshev Spectral Method and both of which have been compared to give the best results, later we are going to use MCMC and Log Likelihood methods to interpret the best possible values for the cosmological parameters.
 
 #Results
-Best fit H₀ ≈ 68.5 km/s/Mpc (consistent with Planck 2018)
+Best fit H₀ ≈ 69.23 km/s/Mpc 
 Best fit Ω_m0 ≈ 0.3
 Stability analysis identifies b → 0 as physically viable regime
