@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 N = 400
 z_max = 30
 z = np.linspace(0,z_max,N)
-Omega_m0 = float(input("Enter the dimensionless matter density: "))
+Omega_m0 = 0.3
 lamb = 1.2
 step_size = z_max/(N-1)
 b = 1
