@@ -55,7 +55,8 @@ def r_residual(b,lamb):
 fig, ax = plt.subplots(figsize=(10, 6))
 E_guess = np.sqrt(omega * (1.0 + z) ** 3 + (1.0 - omega))
 for b in b_space:
-    res_func = r_residual(b, 0.5)
+  for lamb in lamb_space:
+    res_func = r_residual(b, lamb)
     E_sol = root(res_func, E_guess, method='lm')
     if E_sol.success:
         E_guess = E_sol.x  # use previous solution as next guess
@@ -93,4 +94,79 @@ ax.grid(True)
 fig.tight_layout()
 plt.show()
 
-!pip install emcee
+!pip install emcee corner
+import emcee
+import corner
+def log_prior(theta):
+  b,H0_vals,om,lamb = theta
+  if not (0.0001 <= b <= 2.0):
+      return -np.inf
+  if not (0.5 <= lamb <= 2.0):
+      return -np.inf
+  if not (0.1 <= om <= 0.9):
+      return -np.inf  
+  if not (55.0 <= H0_val <= 85.0):
+      return -np.inf
+  lp  = -0.5 * ((H0_val - 70.0) / 5.0) ** 2
+  lp += -0.5 * ((om    - 0.30 ) / 0.1) ** 2
+  lp += -0.5 * ((b     - 0.1  ) / 0.5) ** 2
+  lp += -0.5 * ((lamb  - 1.2  ) / 0.5) ** 2
+  return lp
+def log_likelihood(theta):
+  b,H0_vals,om,lamb = theta
+  try:
+      E_g = np.sqrt(om * (1 + z) ** 3 + (1 - om))
+      res_func = r_residual(b, lamb)
+      E_sol = root(res_func, E_g, method='lm')
+      if not E_sol.success:
+         return -np.inf
+      E_interp = interp1d(z[sort_idx], E_sol.x[sort_idx],
+                            kind='cubic',
+                            bounds_error=False,
+                            fill_value='extrapolate')
+      H_model = H0_val * E_interp(z_data)
+      chi2 = np.sum(((H_data - H_model) / err_data) ** 2)
+      return -0.5 * chi2
+  except Exception:
+      return -np.inf
+def log_posterior(theta):
+    lp = log_prior(theta)
+    if not np.isfinite(lp):
+        return -np.inf
+    ll = log_likelihood(theta)
+    if not np.isfinite(ll):
+        return -np.inf
+    return lp + ll
+dimensions = 4
+walkers = 32
+burn_steps = 300
+n_steps = 1500
+exp_mean_vals = [0.1,69,0.3,1.2]
+step_size = [0.05, 0.5, 0.01,0.1]
+val = exp_mean_vals + step_size*np.random.rand(walkers,dimensions)
+
+sample_space = emcee.EnsembleSampler(walkers,dimensions,log_posterior)
+state = sample_space.run_mcmc(val, burn_steps, progress=True)
+sampler.reset()
+
+sample_space.run_mcmc(state, n_steps, progress=True)
+samples = sample_space.get_chain(flat=True)
+b_fit, H0_fit, om_fit, lamb_fit = np.median(samples, axis=0)
+b_err,  H0_err,om_err, lamb_err = np.std(samples, axis=0)
+print(f"b        = {b_fit} ± {b_err:}")
+print(f"lamb       = {lamb_fit} ± {lamb_err:}")
+print(f"om     = {om_fit} ± {om_err}")
+print(f"H0       = {H0_fit} ± {H0_err}")
+labels = [r"$b$", r"$H_0$", r"$\Omega_{m0}$", r"$\lambda$"]
+fig_corner = corner.corner(
+    samples,
+    labels=labels,
+    truths=[b_fit, lamb_fit, om_fit, H0_fit],
+    quantiles=[0.16, 0.5, 0.84],
+    show_titles=True,
+    title_kwargs={"fontsize": 12}
+)
+plt.show()
+
+    
+  
